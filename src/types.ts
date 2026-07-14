@@ -138,6 +138,7 @@ export interface Character {
   peakNetWorth: number;
   miniGamePlaysThisMonth: Partial<Record<MiniGameId, number>>;
   practicePlaysThisMonth: Partial<Record<SkillName, number>>;
+  redeemedCodes: string[];
 }
 
 export interface GameState {

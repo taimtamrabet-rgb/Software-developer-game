@@ -23,6 +23,10 @@ const PRACTICE_ENERGY_COST = 10;
 const PRACTICE_SKILL_GAIN = 2;
 const PRACTICE_MAX_PER_MONTH = 3;
 
+const SOCIAL_CODES: Record<string, { money: number; experienceMonths: number }> = {
+  '0925': { money: 100000, experienceMonths: 36 },
+};
+
 function relevantSkillFor(track: Track, skills: Character['skills']): number {
   return track === 'software' ? skills.coding : skills.design;
 }
@@ -93,6 +97,7 @@ interface GameStore {
   upgradeStudioTier: () => void;
   startStudioProject: (templateId: string) => void;
   sellStudio: () => void;
+  redeemCode: (code: string) => boolean;
   retire: () => void;
   advanceMonth: () => void;
 }
@@ -121,6 +126,7 @@ function freshCharacter(name: string, track: Track): Character {
     peakNetWorth: 4000,
     miniGamePlaysThisMonth: {},
     practicePlaysThisMonth: {},
+    redeemedCodes: [],
   };
 }
 
@@ -414,6 +420,25 @@ export const useGameStore = create<GameStore>()(
         set({ character: c, currentJobOffers: generateOffers(c) });
       },
 
+      redeemCode: (code) => {
+        const state = get();
+        if (!state.character) return false;
+        const normalized = code.trim().toLowerCase();
+        const reward = SOCIAL_CODES[normalized];
+        if (!reward || state.character.redeemedCodes.includes(normalized)) return false;
+        const c: Character = structuredClone(state.character);
+        c.money += reward.money;
+        c.experienceMonths += reward.experienceMonths;
+        c.redeemedCodes.push(normalized);
+        pushEvent(
+          c,
+          `You redeemed a social code for $${reward.money.toLocaleString()} and ${Math.round(reward.experienceMonths / 12)} years of experience!`,
+          'good',
+        );
+        set({ character: c, currentJobOffers: generateOffers(c) });
+        return true;
+      },
+
       retire: () => {
         const state = get();
         if (!state.character) return;
@@ -521,7 +546,7 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: 'dev-career-game-save',
-      version: 2,
+      version: 3,
       migrate: (persistedState) => {
         const state = persistedState as GameStore;
         const c = state?.character;
@@ -531,6 +556,7 @@ export const useGameStore = create<GameStore>()(
           if (c.studio && c.studio.projectsCompleted === undefined) c.studio.projectsCompleted = 0;
           if (!c.miniGamePlaysThisMonth) c.miniGamePlaysThisMonth = {};
           if (!c.practicePlaysThisMonth) c.practicePlaysThisMonth = {};
+          if (!c.redeemedCodes) c.redeemedCodes = [];
         }
         return state;
       },

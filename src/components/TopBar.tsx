@@ -8,9 +8,20 @@ export function TopBar() {
   const startYear = useGameStore((s) => s.startYear);
   const advanceMonth = useGameStore((s) => s.advanceMonth);
   const retire = useGameStore((s) => s.retire);
+  const redeemCode = useGameStore((s) => s.redeemCode);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [codeInput, setCodeInput] = useState('');
+  const [codeMessage, setCodeMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
   const avatar = character.studio ? '🏢' : character.track === 'software' ? '💻' : '🎮';
+
+  function handleRedeem() {
+    if (!codeInput.trim()) return;
+    const success = redeemCode(codeInput);
+    setCodeMessage(success ? { text: 'Code redeemed!', ok: true } : { text: 'Invalid or already used code', ok: false });
+    setCodeInput('');
+    window.setTimeout(() => setCodeMessage(null), 3000);
+  }
 
   return (
     <div className="sticky top-0 z-20 bg-slate-950/90 backdrop-blur border-b border-slate-800">
@@ -48,10 +59,31 @@ export function TopBar() {
             ⋮
           </button>
           {menuOpen && (
-            <div className="absolute right-0 mt-2 w-44 rounded-xl border border-slate-800 bg-slate-900 shadow-xl overflow-hidden z-30">
-              <div className="w-full flex items-center justify-between px-4 py-2.5 text-sm border-b border-slate-800">
-                <span className="text-slate-500">Social Code</span>
-                <span className="text-slate-300 font-medium tabular-nums">0925</span>
+            <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-800 bg-slate-900 shadow-xl overflow-hidden z-30">
+              <div className="px-4 py-2.5 border-b border-slate-800">
+                <div className="text-xs text-slate-500 mb-1.5">Social Code</div>
+                <div className="flex gap-1.5">
+                  <input
+                    value={codeInput}
+                    onChange={(e) => setCodeInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleRedeem();
+                    }}
+                    placeholder="Enter code"
+                    className="flex-1 min-w-0 rounded-lg bg-slate-800 border border-slate-700 px-2.5 py-1.5 text-xs text-white placeholder-slate-500 outline-none focus:border-violet-500"
+                  />
+                  <button
+                    onClick={handleRedeem}
+                    className="shrink-0 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold px-3 py-1.5 transition-colors"
+                  >
+                    Go
+                  </button>
+                </div>
+                {codeMessage && (
+                  <div className={`text-xs mt-1.5 ${codeMessage.ok ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {codeMessage.text}
+                  </div>
+                )}
               </div>
               <button
                 onClick={() => {
