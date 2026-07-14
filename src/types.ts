@@ -110,10 +110,23 @@ export interface GameEvent {
   id: string;
   month: number;
   text: string;
-  kind: 'good' | 'bad' | 'neutral';
+  kind: 'good' | 'bad' | 'neutral' | 'achievement';
 }
 
 export type MiniGameId = 'bug-squash' | 'pattern-match' | 'pitch-timing' | 'ad-blitz';
+
+export interface DecisionOptionMeta {
+  id: string;
+  label: string;
+  hint?: string;
+}
+
+export interface PendingDecision {
+  decisionId: string;
+  title: string;
+  description: string;
+  options: DecisionOptionMeta[];
+}
 
 export interface Character {
   name: string;
@@ -139,6 +152,8 @@ export interface Character {
   miniGamePlaysThisMonth: Partial<Record<MiniGameId, number>>;
   practicePlaysThisMonth: Partial<Record<SkillName, number>>;
   redeemedCodes: string[];
+  achievementsUnlocked: string[];
+  pendingDecision: PendingDecision | null;
 }
 
 export interface GameState {

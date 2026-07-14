@@ -5,6 +5,7 @@ import { EndScreen } from './components/EndScreen';
 import { TopBar } from './components/TopBar';
 import { NavBar, type Tab } from './components/NavBar';
 import { EventToast } from './components/EventToast';
+import { DecisionModal } from './components/DecisionModal';
 import { OverviewPanel } from './components/OverviewPanel';
 import { CareerPanel } from './components/CareerPanel';
 import { StudioPanel } from './components/StudioPanel';
@@ -22,6 +23,7 @@ function App() {
     <div className="min-h-svh bg-slate-950 text-slate-200">
       <TopBar />
       <EventToast />
+      <DecisionModal />
       <div className="max-w-5xl mx-auto flex">
         <NavBar active={tab} onChange={setTab} />
         <main className="flex-1 min-w-0 p-4 pb-24 md:pb-6">

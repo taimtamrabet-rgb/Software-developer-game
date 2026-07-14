@@ -1,6 +1,7 @@
 import { useGameStore } from '../store/gameStore';
 import { formatMoney } from '../utils/format';
 import { computeNetWorth } from '../utils/gameLogic';
+import { ACHIEVEMENTS } from '../data/achievements';
 import { Card, SectionTitle } from './Card';
 import { StatBar } from './StatBar';
 
@@ -85,6 +86,33 @@ export function OverviewPanel() {
       </Card>
 
       <Card className="sm:col-span-2">
+        <div className="flex items-center justify-between mb-3">
+          <SectionTitle>Achievements</SectionTitle>
+          <span className="text-xs text-slate-500">
+            {character.achievementsUnlocked.length}/{ACHIEVEMENTS.length}
+          </span>
+        </div>
+        <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
+          {ACHIEVEMENTS.map((a) => {
+            const unlocked = character.achievementsUnlocked.includes(a.id);
+            return (
+              <div
+                key={a.id}
+                title={unlocked ? `${a.title} — ${a.description}` : '???'}
+                className={`aspect-square rounded-xl border flex items-center justify-center text-xl transition-colors ${
+                  unlocked
+                    ? 'border-amber-500/50 bg-amber-500/10'
+                    : 'border-slate-800 bg-slate-800/30 grayscale opacity-30'
+                }`}
+              >
+                {unlocked ? a.icon : '❔'}
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card className="sm:col-span-2">
         <SectionTitle>Recent Events</SectionTitle>
         {character.eventLog.length === 0 ? (
           <div className="text-slate-500 text-sm">Nothing has happened yet. Advance the month to begin!</div>
@@ -94,7 +122,9 @@ export function OverviewPanel() {
               <li
                 key={e.id}
                 className={`text-sm rounded-lg px-3 py-2 border ${
-                  e.kind === 'good'
+                  e.kind === 'achievement'
+                    ? 'border-amber-700 bg-amber-950/40 text-amber-200 font-medium'
+                    : e.kind === 'good'
                     ? 'border-emerald-900 bg-emerald-950/40 text-emerald-200'
                     : e.kind === 'bad'
                     ? 'border-rose-900 bg-rose-950/40 text-rose-200'

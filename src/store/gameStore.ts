@@ -14,6 +14,8 @@ import {
   STUDIO_TIERS, FOUNDING_COST, FOUNDING_MIN_EXPERIENCE_MONTHS, HIRE_COST,
   nextStudioTier,
 } from '../data/studio';
+import { pickDecision, decisionById } from '../data/decisions';
+import { checkAchievements } from '../data/achievements';
 import { clamp, computeNetWorth, studioValuation, studioProfitPreview } from '../utils/gameLogic';
 
 const START_YEAR = 2026;
@@ -73,6 +75,14 @@ function pushEvent(c: Character, text: string, kind: GameEvent['kind']) {
   c.eventLog = [event, ...c.eventLog].slice(0, MAX_LOG);
 }
 
+function applyAchievements(c: Character) {
+  const netWorth = computeNetWorth(c);
+  const unlocked = checkAchievements(c, netWorth);
+  for (const a of unlocked) {
+    pushEvent(c, `${a.icon} Achievement Unlocked: ${a.title} — ${a.description}`, 'achievement');
+  }
+}
+
 interface GameStore {
   character: Character | null;
   currentJobOffers: JobOffer[];
@@ -98,6 +108,7 @@ interface GameStore {
   startStudioProject: (templateId: string) => void;
   sellStudio: () => void;
   redeemCode: (code: string) => boolean;
+  resolveDecision: (optionId: string) => void;
   retire: () => void;
   advanceMonth: () => void;
 }
@@ -127,6 +138,8 @@ function freshCharacter(name: string, track: Track): Character {
     miniGamePlaysThisMonth: {},
     practicePlaysThisMonth: {},
     redeemedCodes: [],
+    achievementsUnlocked: [],
+    pendingDecision: null,
   };
 }
 
@@ -171,6 +184,7 @@ export const useGameStore = create<GameStore>()(
         };
         c.jobsHeld += 1;
         pushEvent(c, `You accepted a ${offer.title} position at ${offer.companyName}.`, 'good');
+        applyAchievements(c);
         set({ character: c, currentJobOffers: generateOffers(c) });
       },
 
@@ -277,6 +291,7 @@ export const useGameStore = create<GameStore>()(
           c.housing = target;
         }
         pushEvent(c, `You moved into: ${target.name}.`, 'neutral');
+        applyAchievements(c);
         set({ character: c });
       },
 
@@ -301,6 +316,7 @@ export const useGameStore = create<GameStore>()(
         c.money -= target.price;
         c.car = target;
         pushEvent(c, `You bought a ${target.name}.`, 'neutral');
+        applyAchievements(c);
         set({ character: c });
       },
 
@@ -344,6 +360,7 @@ export const useGameStore = create<GameStore>()(
             : `You founded your own studio: ${name}, branching into a new field from your career background.`,
           'good',
         );
+        applyAchievements(c);
         set({ character: c, currentJobOffers: generateOffers(c) });
       },
 
@@ -417,6 +434,7 @@ export const useGameStore = create<GameStore>()(
         c.reputation = clamp(c.reputation + 10);
         pushEvent(c, `You sold ${c.studio!.name} for ${valuation.toLocaleString()}!`, 'good');
         c.studio = null;
+        applyAchievements(c);
         set({ character: c, currentJobOffers: generateOffers(c) });
       },
 
@@ -439,12 +457,28 @@ export const useGameStore = create<GameStore>()(
         return true;
       },
 
+      resolveDecision: (optionId) => {
+        const state = get();
+        if (!state.character || !state.character.pendingDecision) return;
+        const decision = decisionById(state.character.pendingDecision.decisionId);
+        const c: Character = structuredClone(state.character);
+        c.pendingDecision = null;
+        const option = decision?.options.find((o) => o.id === optionId);
+        if (option) {
+          const outcome = option.apply(c);
+          if (outcome.text) pushEvent(c, outcome.text, outcome.kind);
+        }
+        applyAchievements(c);
+        set({ character: c, currentJobOffers: generateOffers(c) });
+      },
+
       retire: () => {
         const state = get();
         if (!state.character) return;
         const c: Character = structuredClone(state.character);
         c.retired = true;
         pushEvent(c, `${c.name} retired from the industry.`, 'neutral');
+        applyAchievements(c);
         set({ character: c });
       },
 
@@ -527,14 +561,30 @@ export const useGameStore = create<GameStore>()(
         c.happiness = clamp(c.happiness + (targetHappiness - c.happiness) * 0.12);
         c.energy = clamp(c.energy + 9);
 
-        const event = maybeTriggerEvent(c);
-        if (event && event.text) pushEvent(c, event.text, event.kind);
+        let decisionTriggered = false;
+        if (Math.random() < 0.32) {
+          const decision = pickDecision(c);
+          if (decision) {
+            c.pendingDecision = {
+              decisionId: decision.id,
+              title: decision.title,
+              description: decision.description,
+              options: decision.options.map((o) => ({ id: o.id, label: o.label })),
+            };
+            decisionTriggered = true;
+          }
+        }
+        if (!decisionTriggered) {
+          const event = maybeTriggerEvent(c);
+          if (event && event.text) pushEvent(c, event.text, event.kind);
+        }
 
         if (c.money < 0) {
           c.happiness = clamp(c.happiness - 8);
         }
 
         c.peakNetWorth = Math.max(c.peakNetWorth, computeNetWorth(c));
+        applyAchievements(c);
 
         if (c.age >= 75) {
           c.retired = true;
@@ -546,7 +596,7 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: 'dev-career-game-save',
-      version: 3,
+      version: 4,
       migrate: (persistedState) => {
         const state = persistedState as GameStore;
         const c = state?.character;
@@ -557,6 +607,8 @@ export const useGameStore = create<GameStore>()(
           if (!c.miniGamePlaysThisMonth) c.miniGamePlaysThisMonth = {};
           if (!c.practicePlaysThisMonth) c.practicePlaysThisMonth = {};
           if (!c.redeemedCodes) c.redeemedCodes = [];
+          if (!c.achievementsUnlocked) c.achievementsUnlocked = [];
+          if (c.pendingDecision === undefined) c.pendingDecision = null;
         }
         return state;
       },
