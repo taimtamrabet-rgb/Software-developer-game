@@ -238,7 +238,21 @@ export const useGameStore = create<GameStore>()(
         c.energy = clamp(c.energy - def.energyCost);
         c.skills[def.skill] = clamp(c.skills[def.skill] + gain);
         c.miniGamePlaysThisMonth[id] = plays + 1;
-        pushEvent(c, `You scored ${clampedScore}% in ${def.name}, gaining +${gain} ${def.skill}.`, gain >= 4 ? 'good' : 'neutral');
+
+        let bonus = 0;
+        if (c.currentJob) {
+          bonus = Math.round(c.currentJob.salary * (0.04 + 0.16 * (clampedScore / 100)));
+          c.money += bonus;
+          c.reputation = clamp(c.reputation + clampedScore / 50);
+        }
+
+        pushEvent(
+          c,
+          bonus > 0
+            ? `You scored ${clampedScore}% in ${def.name}, gaining +${gain} ${def.skill} and a ${bonus.toLocaleString()} work bonus!`
+            : `You scored ${clampedScore}% in ${def.name}, gaining +${gain} ${def.skill}.`,
+          gain >= 4 || bonus > 0 ? 'good' : 'neutral',
+        );
         set({ character: c });
       },
 

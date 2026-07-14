@@ -2,6 +2,7 @@ import { useGameStore } from '../store/gameStore';
 import { formatMoney } from '../utils/format';
 import { WORK_MODES } from '../data/workModes';
 import { Card, SectionTitle } from './Card';
+import { MiniGamesSection } from './MiniGamesSection';
 import type { Track } from '../types';
 
 export function CareerPanel() {
@@ -60,6 +61,13 @@ export function CareerPanel() {
             ))}
           </div>
         </Card>
+      )}
+
+      {character.currentJob && (
+        <MiniGamesSection
+          title="On-the-Job Challenges"
+          description="Tackle a quick work challenge for a skill boost and a cash bonus based on your score."
+        />
       )}
 
       {hasStudio && (

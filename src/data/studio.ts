@@ -16,7 +16,7 @@ export const STUDIO_TIERS: StudioTierDef[] = [
 ];
 
 export const FOUNDING_COST = 50000;
-export const FOUNDING_MIN_EXPERIENCE_MONTHS = 30;
+export const FOUNDING_MIN_EXPERIENCE_MONTHS = 24;
 
 export const HIRE_COST = 8000;
 export const AVG_EMPLOYEE_SALARY = 5500;
