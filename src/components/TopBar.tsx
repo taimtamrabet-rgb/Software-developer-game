@@ -49,6 +49,10 @@ export function TopBar() {
           </button>
           {menuOpen && (
             <div className="absolute right-0 mt-2 w-44 rounded-xl border border-slate-800 bg-slate-900 shadow-xl overflow-hidden z-30">
+              <div className="w-full flex items-center justify-between px-4 py-2.5 text-sm border-b border-slate-800">
+                <span className="text-slate-500">Social Code</span>
+                <span className="text-slate-300 font-medium tabular-nums">0925</span>
+              </div>
               <button
                 onClick={() => {
                   if (confirm('Retire now and end your career?')) retire();

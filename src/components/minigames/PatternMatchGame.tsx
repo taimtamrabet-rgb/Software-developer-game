@@ -14,27 +14,31 @@ export function PatternMatchGame({ onComplete }: { onComplete: (score: number) =
   const [litIndex, setLitIndex] = useState<number | null>(null);
   const [playerIndex, setPlayerIndex] = useState(0);
   const [round, setRound] = useState(0);
-  const startedRef = useRef(false);
+  const runIdRef = useRef(0);
 
   useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-    nextRound([]);
+    const id = ++runIdRef.current;
+    nextRound([], id);
+    return () => {
+      runIdRef.current += 1;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function nextRound(prevSeq: number[]) {
+  function nextRound(prevSeq: number[], id: number) {
+    if (id !== runIdRef.current) return;
     const seq = [...prevSeq, Math.floor(Math.random() * 4)];
     setSequence(seq);
     setRound(seq.length);
     setPlayerIndex(0);
     setPhase('showing');
-    playSequence(seq);
+    playSequence(seq, id);
   }
 
-  function playSequence(seq: number[]) {
+  function playSequence(seq: number[], id: number) {
     let i = 0;
     const step = () => {
+      if (id !== runIdRef.current) return;
       if (i >= seq.length) {
         setLitIndex(null);
         setPhase('input');
@@ -42,14 +46,19 @@ export function PatternMatchGame({ onComplete }: { onComplete: (score: number) =
       }
       setLitIndex(seq[i]);
       window.setTimeout(() => {
+        if (id !== runIdRef.current) return;
         setLitIndex(null);
         window.setTimeout(() => {
+          if (id !== runIdRef.current) return;
           i += 1;
           step();
         }, 200);
       }, 450);
     };
-    window.setTimeout(step, 400);
+    window.setTimeout(() => {
+      if (id !== runIdRef.current) return;
+      step();
+    }, 400);
   }
 
   function handleTileClick(colorId: number) {
@@ -60,7 +69,7 @@ export function PatternMatchGame({ onComplete }: { onComplete: (score: number) =
           setPhase('done');
           onComplete(100);
         } else {
-          nextRound(sequence);
+          nextRound(sequence, runIdRef.current);
         }
       } else {
         setPlayerIndex(playerIndex + 1);

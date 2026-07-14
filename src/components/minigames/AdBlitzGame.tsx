@@ -26,19 +26,22 @@ export function AdBlitzGame({ onComplete }: { onComplete: (score: number) => voi
   const wrongRef = useRef(0);
   const totalOnBrandRef = useRef(0);
   const timeoutRef = useRef<number | undefined>(undefined);
-  const startedRef = useRef(false);
+  const runIdRef = useRef(0);
 
   useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-    totalOnBrandRef.current += tiles.filter((t) => t.onBrand).length;
-    timeoutRef.current = window.setTimeout(endRound, ROUND_MS);
-    return () => window.clearTimeout(timeoutRef.current);
+    const id = ++runIdRef.current;
+    totalOnBrandRef.current = tiles.filter((t) => t.onBrand).length;
+    timeoutRef.current = window.setTimeout(() => endRound(1, id), ROUND_MS);
+    return () => {
+      runIdRef.current += 1;
+      window.clearTimeout(timeoutRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function endRound() {
-    if (round >= ROUNDS) {
+  function endRound(currentRound: number, id: number) {
+    if (id !== runIdRef.current) return;
+    if (currentRound >= ROUNDS) {
       const total = Math.max(1, totalOnBrandRef.current);
       const score = Math.round(((correctRef.current - wrongRef.current * 0.5) / total) * 100);
       onComplete(Math.max(0, Math.min(100, score)));
@@ -47,8 +50,9 @@ export function AdBlitzGame({ onComplete }: { onComplete: (score: number) => voi
     const nextTiles = makeTiles();
     totalOnBrandRef.current += nextTiles.filter((t) => t.onBrand).length;
     setTiles(nextTiles);
-    setRound((r) => r + 1);
-    timeoutRef.current = window.setTimeout(endRound, ROUND_MS);
+    const nextRound = currentRound + 1;
+    setRound(nextRound);
+    timeoutRef.current = window.setTimeout(() => endRound(nextRound, id), ROUND_MS);
   }
 
   function handleTileClick(id: number) {

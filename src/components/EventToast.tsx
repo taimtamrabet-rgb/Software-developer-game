@@ -10,7 +10,11 @@ export function EventToast() {
     setVisibleId(latest.id);
     const t = setTimeout(() => setVisibleId((id) => (id === latest.id ? null : id)), 4500);
     return () => clearTimeout(t);
-  }, [latest]);
+    // Only re-run when the event's identity actually changes, not on every
+    // store update (structuredClone gives eventLog[0] a new object reference
+    // on every action, even ones that don't push a new event).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latest?.id]);
 
   if (!latest || visibleId !== latest.id) return null;
 

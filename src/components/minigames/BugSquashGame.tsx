@@ -8,17 +8,20 @@ export function BugSquashGame({ onComplete }: { onComplete: (score: number) => v
   const [hits, setHits] = useState(0);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const timeoutRef = useRef<number | undefined>(undefined);
-  const startedRef = useRef(false);
+  const runIdRef = useRef(0);
 
   useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-    spawnNext(0, 0);
-    return () => window.clearTimeout(timeoutRef.current);
+    const id = ++runIdRef.current;
+    spawnNext(0, 0, id);
+    return () => {
+      runIdRef.current += 1;
+      window.clearTimeout(timeoutRef.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function spawnNext(spawnedCount: number, hitCount: number) {
+  function spawnNext(spawnedCount: number, hitCount: number, id: number) {
+    if (id !== runIdRef.current) return;
     if (spawnedCount >= TOTAL) {
       const score = Math.round((hitCount / TOTAL) * 100);
       setPos(null);
@@ -30,8 +33,9 @@ export function BugSquashGame({ onComplete }: { onComplete: (score: number) => v
     setPos({ x, y });
     setSpawned(spawnedCount + 1);
     timeoutRef.current = window.setTimeout(() => {
+      if (id !== runIdRef.current) return;
       setPos(null);
-      spawnNext(spawnedCount + 1, hitCount);
+      spawnNext(spawnedCount + 1, hitCount, id);
     }, VISIBLE_MS);
   }
 
@@ -40,7 +44,7 @@ export function BugSquashGame({ onComplete }: { onComplete: (score: number) => v
     setPos(null);
     const newHits = hits + 1;
     setHits(newHits);
-    spawnNext(spawned, newHits);
+    spawnNext(spawned, newHits, runIdRef.current);
   }
 
   return (
