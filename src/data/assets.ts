@@ -1,0 +1,113 @@
+import type { HousingOption, CarOption } from '../types';
+
+export const HOUSING_OPTIONS: HousingOption[] = [
+  {
+    id: 'rent-studio',
+    name: 'Rented Studio Apartment',
+    price: 0,
+    monthlyCost: 900,
+    happinessBonus: 0,
+    minMoneyToBuy: 0,
+  },
+  {
+    id: 'rent-1br',
+    name: 'Rented 1-Bedroom Apartment',
+    price: 0,
+    monthlyCost: 1500,
+    happinessBonus: 4,
+    minMoneyToBuy: 0,
+  },
+  {
+    id: 'condo',
+    name: 'Small Condo',
+    price: 90000,
+    monthlyCost: 700,
+    happinessBonus: 8,
+    minMoneyToBuy: 20000,
+  },
+  {
+    id: 'starter-house',
+    name: 'Starter House',
+    price: 220000,
+    monthlyCost: 1200,
+    happinessBonus: 14,
+    minMoneyToBuy: 45000,
+  },
+  {
+    id: 'suburban-house',
+    name: 'Suburban House',
+    price: 480000,
+    monthlyCost: 1900,
+    happinessBonus: 22,
+    minMoneyToBuy: 100000,
+  },
+  {
+    id: 'luxury-condo',
+    name: 'Luxury High-Rise Condo',
+    price: 950000,
+    monthlyCost: 3200,
+    happinessBonus: 32,
+    minMoneyToBuy: 200000,
+  },
+  {
+    id: 'mansion',
+    name: 'Private Mansion',
+    price: 2400000,
+    monthlyCost: 6500,
+    happinessBonus: 45,
+    minMoneyToBuy: 500000,
+  },
+  {
+    id: 'beachfront-villa',
+    name: 'Beachfront Villa',
+    price: 6000000,
+    monthlyCost: 14000,
+    happinessBonus: 60,
+    minMoneyToBuy: 1200000,
+  },
+];
+
+export const CAR_OPTIONS: CarOption[] = [
+  {
+    id: 'used-hatchback',
+    name: 'Used Hatchback',
+    price: 4500,
+    monthlyCost: 150,
+    happinessBonus: 3,
+  },
+  {
+    id: 'new-sedan',
+    name: 'New Sedan',
+    price: 24000,
+    monthlyCost: 320,
+    happinessBonus: 8,
+  },
+  {
+    id: 'suv',
+    name: 'Family SUV',
+    price: 42000,
+    monthlyCost: 420,
+    happinessBonus: 12,
+  },
+  {
+    id: 'sports-car',
+    name: 'Sports Car',
+    price: 85000,
+    monthlyCost: 700,
+    happinessBonus: 20,
+  },
+  {
+    id: 'luxury-suv',
+    name: 'Luxury SUV',
+    price: 140000,
+    monthlyCost: 950,
+    happinessBonus: 26,
+  },
+  {
+    id: 'supercar',
+    name: 'Supercar',
+    price: 320000,
+    monthlyCost: 2100,
+    happinessBonus: 38,
+  },
+];
