@@ -2,31 +2,13 @@ import type { Course } from '../types';
 
 export const COURSES: Course[] = [
   {
-    id: 'coding-fundamentals',
-    name: 'Advanced Algorithms Workshop',
-    skill: 'coding',
-    cost: 400,
-    energyCost: 20,
-    skillGain: 6,
-    description: 'Sharpen your data structures & algorithms skills.',
-  },
-  {
     id: 'coding-systems',
     name: 'Systems Design Bootcamp',
     skill: 'coding',
     cost: 1200,
     energyCost: 30,
     skillGain: 10,
-    description: 'Learn to architect large-scale systems.',
-  },
-  {
-    id: 'design-ux',
-    name: 'UX/Game Design Intensive',
-    skill: 'design',
-    cost: 500,
-    energyCost: 20,
-    skillGain: 7,
-    description: 'Level up your design sensibility and craft.',
+    description: 'Learn to architect large-scale systems. A guaranteed, bigger boost than practice alone.',
   },
   {
     id: 'design-advanced',
@@ -35,7 +17,7 @@ export const COURSES: Course[] = [
     cost: 1400,
     energyCost: 30,
     skillGain: 11,
-    description: 'Study under industry veterans.',
+    description: 'Study under industry veterans. A guaranteed, bigger boost than practice alone.',
   },
   {
     id: 'business-mba',
@@ -44,25 +26,7 @@ export const COURSES: Course[] = [
     cost: 1600,
     energyCost: 25,
     skillGain: 9,
-    description: 'Learn finance, strategy, and operations.',
-  },
-  {
-    id: 'business-leadership',
-    name: 'Leadership & Management Seminar',
-    skill: 'business',
-    cost: 700,
-    energyCost: 20,
-    skillGain: 6,
-    description: 'Build the skills to lead a team.',
-  },
-  {
-    id: 'marketing-basics',
-    name: 'Digital Marketing Crash Course',
-    skill: 'marketing',
-    cost: 350,
-    energyCost: 15,
-    skillGain: 6,
-    description: 'Learn to market products and build a brand.',
+    description: 'Learn finance, strategy, and operations. A guaranteed, bigger boost than practice alone.',
   },
   {
     id: 'marketing-growth',
@@ -71,6 +35,6 @@ export const COURSES: Course[] = [
     cost: 900,
     energyCost: 25,
     skillGain: 9,
-    description: 'Master growth loops and user acquisition.',
+    description: 'Master growth loops and user acquisition. A guaranteed, bigger boost than practice alone.',
   },
 ];

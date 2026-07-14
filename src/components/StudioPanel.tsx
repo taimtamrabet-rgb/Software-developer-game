@@ -3,6 +3,7 @@ import { useGameStore } from '../store/gameStore';
 import { formatMoney } from '../utils/format';
 import { studioValuation, studioProfitPreview } from '../utils/gameLogic';
 import { FOUNDING_COST, FOUNDING_MIN_EXPERIENCE_MONTHS, HIRE_COST, nextStudioTier } from '../data/studio';
+import { projectsForStudioType } from '../data/studioProjects';
 import { Card, SectionTitle } from './Card';
 import { StatBar } from './StatBar';
 import type { StudioType } from '../types';
@@ -19,6 +20,7 @@ export function StudioPanel() {
   const hireEmployee = useGameStore((s) => s.hireEmployee);
   const fireEmployee = useGameStore((s) => s.fireEmployee);
   const upgradeStudioTier = useGameStore((s) => s.upgradeStudioTier);
+  const startStudioProject = useGameStore((s) => s.startStudioProject);
   const sellStudio = useGameStore((s) => s.sellStudio);
 
   const [studioName, setStudioName] = useState('');
@@ -47,6 +49,10 @@ export function StudioPanel() {
         />
 
         <label className="block text-sm text-slate-300 mb-2">Studio type</label>
+        <p className="text-xs text-slate-500 mb-2">
+          You can found any type of studio, regardless of your career track &mdash; branching out just starts with
+          slightly less initial reputation than a matching background.
+        </p>
         <div className="grid grid-cols-3 gap-2 mb-5">
           {STUDIO_TYPE_INFO.map((t) => (
             <button
@@ -144,6 +150,65 @@ export function StudioPanel() {
             Lay Off
           </button>
         </div>
+      </Card>
+
+      <Card>
+        <SectionTitle>Projects</SectionTitle>
+        {studio.activeProject ? (
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-white font-medium text-sm">{studio.activeProject.name}</div>
+              <div className="text-slate-400 text-xs">
+                {studio.activeProject.monthsRemaining}/{studio.activeProject.totalMonths} mo left
+              </div>
+            </div>
+            <div className="h-2 rounded-full bg-slate-800 overflow-hidden mb-2">
+              <div
+                className="h-full rounded-full bg-violet-500 transition-all duration-500"
+                style={{
+                  width: `${((studio.activeProject.totalMonths - studio.activeProject.monthsRemaining) / studio.activeProject.totalMonths) * 100}%`,
+                }}
+              />
+            </div>
+            <div className="text-xs text-slate-500">
+              Invested {formatMoney(studio.activeProject.cost)} &middot; base payout {formatMoney(studio.activeProject.baseProfit)}{' '}
+              &middot; {Math.round(studio.activeProject.viralChance * 100)}% chance to go viral (
+              {studio.activeProject.viralMultiplierMin}&times;&ndash;{studio.activeProject.viralMultiplierMax}&times;)
+            </div>
+          </div>
+        ) : (
+          <>
+            <p className="text-slate-400 text-sm mb-3">
+              Greenlight a project for your studio to develop. Bigger projects take longer and cost more, but pay out
+              a lump sum when finished &mdash; with a chance to go viral for a huge multiplier.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {projectsForStudioType(studio.type).map((project) => {
+                const canAfford = character.money >= project.cost;
+                return (
+                  <div key={project.id} className="rounded-xl border border-slate-800 bg-slate-800/30 p-3.5">
+                    <div className="text-white font-medium text-sm">{project.icon} {project.name}</div>
+                    <div className="text-slate-400 text-xs mt-1">{project.description}</div>
+                    <div className="text-xs text-slate-500 mt-2 space-y-0.5">
+                      <div>⏱ {project.durationMonths} months &middot; 💰 {formatMoney(project.cost)} to start</div>
+                      <div>
+                        📈 {formatMoney(project.baseProfit)} base payout &middot; 🎲 {Math.round(project.viralChance * 100)}%
+                        viral chance ({project.viralMultiplierMin}&times;&ndash;{project.viralMultiplierMax}&times;)
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => startStudioProject(project.id)}
+                      disabled={!canAfford}
+                      className="w-full mt-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:bg-slate-700 disabled:text-slate-500 text-white text-xs font-semibold py-2 transition-colors"
+                    >
+                      Start Project
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </Card>
 
       {next && (

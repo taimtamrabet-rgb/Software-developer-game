@@ -1,12 +1,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
-  Character, GameEvent, JobOffer, SkillName, StudioType, Track,
+  Character, GameEvent, JobOffer, MiniGameId, SkillName, StudioType, Track, WorkMode,
 } from '../types';
 import { tiersFor, titleForMonthsAtTier, highestUnlockedTier } from '../data/companies';
 import { HOUSING_OPTIONS, CAR_OPTIONS } from '../data/assets';
 import { COURSES } from '../data/courses';
 import { maybeTriggerEvent } from '../data/events';
+import { miniGameFor } from '../data/miniGames';
+import { workModeFor } from '../data/workModes';
+import { STUDIO_PROJECTS } from '../data/studioProjects';
 import {
   STUDIO_TIERS, FOUNDING_COST, FOUNDING_MIN_EXPERIENCE_MONTHS, HIRE_COST,
   nextStudioTier,
@@ -16,8 +19,16 @@ import { clamp, computeNetWorth, studioValuation, studioProfitPreview } from '..
 const START_YEAR = 2026;
 const MAX_LOG = 30;
 
+const PRACTICE_ENERGY_COST = 10;
+const PRACTICE_SKILL_GAIN = 2;
+const PRACTICE_MAX_PER_MONTH = 3;
+
 function relevantSkillFor(track: Track, skills: Character['skills']): number {
   return track === 'software' ? skills.coding : skills.design;
+}
+
+function studioMatchesTrack(track: Track, type: StudioType): boolean {
+  return track === 'game' ? type === 'game' : type === 'software' || type === 'tech';
 }
 
 function generateOffers(c: Character): JobOffer[] {
@@ -67,8 +78,11 @@ interface GameStore {
   refreshJobOffers: () => void;
   applyToJob: (offerId: string) => void;
   quitJob: () => void;
+  setWorkMode: (mode: WorkMode) => void;
   switchTrack: (track: Track) => void;
   takeCourse: (courseId: string) => void;
+  practiceSkill: (skill: SkillName) => void;
+  playMiniGame: (id: MiniGameId, score: number) => void;
   buyHouse: (houseId: string) => void;
   sellHouse: () => void;
   buyCar: (carId: string) => void;
@@ -77,6 +91,7 @@ interface GameStore {
   hireEmployee: () => void;
   fireEmployee: () => void;
   upgradeStudioTier: () => void;
+  startStudioProject: (templateId: string) => void;
   sellStudio: () => void;
   retire: () => void;
   advanceMonth: () => void;
@@ -104,6 +119,8 @@ function freshCharacter(name: string, track: Track): Character {
     studiosFounded: 0,
     studiosSold: 0,
     peakNetWorth: 4000,
+    miniGamePlaysThisMonth: {},
+    practicePlaysThisMonth: {},
   };
 }
 
@@ -144,6 +161,7 @@ export const useGameStore = create<GameStore>()(
           salary: offer.salary,
           monthsAtJob: 0,
           monthsAtTier: 0,
+          workMode: 'standard',
         };
         c.jobsHeld += 1;
         pushEvent(c, `You accepted a ${offer.title} position at ${offer.companyName}.`, 'good');
@@ -158,6 +176,14 @@ export const useGameStore = create<GameStore>()(
         c.currentJob = null;
         c.reputation = clamp(c.reputation - 2);
         set({ character: c, currentJobOffers: generateOffers(c) });
+      },
+
+      setWorkMode: (mode) => {
+        const state = get();
+        if (!state.character || !state.character.currentJob) return;
+        const c: Character = structuredClone(state.character);
+        c.currentJob!.workMode = mode;
+        set({ character: c });
       },
 
       switchTrack: (track) => {
@@ -186,6 +212,34 @@ export const useGameStore = create<GameStore>()(
         c.skills[course.skill as SkillName] = clamp(c.skills[course.skill as SkillName] + course.skillGain);
         pushEvent(c, `You completed "${course.name}", improving your ${course.skill} skill.`, 'good');
         set({ character: c, currentJobOffers: generateOffers(c) });
+      },
+
+      practiceSkill: (skill) => {
+        const state = get();
+        if (!state.character) return;
+        const c: Character = structuredClone(state.character);
+        const plays = c.practicePlaysThisMonth[skill] ?? 0;
+        if (plays >= PRACTICE_MAX_PER_MONTH || c.energy < PRACTICE_ENERGY_COST) return;
+        c.energy = clamp(c.energy - PRACTICE_ENERGY_COST);
+        c.skills[skill] = clamp(c.skills[skill] + PRACTICE_SKILL_GAIN);
+        c.practicePlaysThisMonth[skill] = plays + 1;
+        set({ character: c });
+      },
+
+      playMiniGame: (id, score) => {
+        const state = get();
+        if (!state.character) return;
+        const def = miniGameFor(id);
+        const c: Character = structuredClone(state.character);
+        const plays = c.miniGamePlaysThisMonth[id] ?? 0;
+        if (plays >= def.maxPlaysPerMonth || c.energy < def.energyCost) return;
+        const clampedScore = Math.max(0, Math.min(100, score));
+        const gain = Math.round(def.minSkillGain + (def.maxSkillGain - def.minSkillGain) * (clampedScore / 100));
+        c.energy = clamp(c.energy - def.energyCost);
+        c.skills[def.skill] = clamp(c.skills[def.skill] + gain);
+        c.miniGamePlaysThisMonth[id] = plays + 1;
+        pushEvent(c, `You scored ${clampedScore}% in ${def.name}, gaining +${gain} ${def.skill}.`, gain >= 4 ? 'good' : 'neutral');
+        set({ character: c });
       },
 
       buyHouse: (houseId) => {
@@ -248,19 +302,28 @@ export const useGameStore = create<GameStore>()(
         if (c.money < FOUNDING_COST || c.experienceMonths < FOUNDING_MIN_EXPERIENCE_MONTHS || c.studio) return;
         c.money -= FOUNDING_COST;
         c.currentJob = null;
+        const matches = studioMatchesTrack(c.track, type);
         c.studio = {
           type,
           name,
           tier: 1,
           tierName: STUDIO_TIERS[0].name,
           employees: 1,
-          reputation: 35,
+          reputation: matches ? 45 : 35,
           monthsRunning: 0,
           cashBuffer: 0,
           lastMonthProfit: 0,
+          activeProject: null,
+          projectsCompleted: 0,
         };
         c.studiosFounded += 1;
-        pushEvent(c, `You founded your own studio: ${name}!`, 'good');
+        pushEvent(
+          c,
+          matches
+            ? `You founded your own studio: ${name}! Your background gives you a head start.`
+            : `You founded your own studio: ${name}, branching into a new field from your career background.`,
+          'good',
+        );
         set({ character: c, currentJobOffers: generateOffers(c) });
       },
 
@@ -300,6 +363,30 @@ export const useGameStore = create<GameStore>()(
         set({ character: c });
       },
 
+      startStudioProject: (templateId) => {
+        const state = get();
+        if (!state.character || !state.character.studio) return;
+        if (state.character.studio.activeProject) return;
+        const template = STUDIO_PROJECTS.find((p) => p.id === templateId);
+        if (!template) return;
+        const c: Character = structuredClone(state.character);
+        if (c.money < template.cost) return;
+        c.money -= template.cost;
+        c.studio!.activeProject = {
+          templateId: template.id,
+          name: template.name,
+          totalMonths: template.durationMonths,
+          monthsRemaining: template.durationMonths,
+          cost: template.cost,
+          baseProfit: template.baseProfit,
+          viralChance: template.viralChance,
+          viralMultiplierMin: template.viralMultiplierMin,
+          viralMultiplierMax: template.viralMultiplierMax,
+        };
+        pushEvent(c, `Your studio started development on "${template.name}".`, 'neutral');
+        set({ character: c });
+      },
+
       sellStudio: () => {
         const state = get();
         if (!state.character || !state.character.studio) return;
@@ -329,17 +416,22 @@ export const useGameStore = create<GameStore>()(
 
         c.monthsElapsed += 1;
         c.age = 22 + Math.floor(c.monthsElapsed / 12);
+        c.miniGamePlaysThisMonth = {};
+        c.practicePlaysThisMonth = {};
 
         if (c.currentJob) {
-          c.money += c.currentJob.salary;
+          const mode = workModeFor(c.currentJob.workMode);
+          const pay = Math.round(c.currentJob.salary * mode.salaryMultiplier);
+          c.money += pay;
           c.experienceMonths += 1;
           c.currentJob.monthsAtJob += 1;
           c.currentJob.monthsAtTier += 1;
           const skillKey: SkillName = c.track === 'software' ? 'coding' : 'design';
-          c.skills[skillKey] = clamp(c.skills[skillKey] + 1 + Math.random());
-          c.skills.business = clamp(c.skills.business + Math.random() * 0.4);
-          c.reputation = clamp(c.reputation + 0.5);
-          c.energy = clamp(c.energy - 7);
+          c.skills[skillKey] = clamp(c.skills[skillKey] + (1 + Math.random()) * mode.skillMultiplier);
+          c.skills.business = clamp(c.skills.business + Math.random() * 0.4 * mode.skillMultiplier);
+          c.reputation = clamp(c.reputation + 0.5 + mode.reputationDelta);
+          c.energy = clamp(c.energy - mode.energyCost);
+          c.happiness = clamp(c.happiness + mode.happinessDelta);
 
           const newTitle = titleForMonthsAtTier(c.currentJob.monthsAtTier);
           if (newTitle.level > c.currentJob.level) {
@@ -363,6 +455,30 @@ export const useGameStore = create<GameStore>()(
           c.experienceMonths += 1;
           c.skills.business = clamp(c.skills.business + 0.8);
           c.energy = clamp(c.energy - 5);
+
+          if (c.studio.activeProject) {
+            c.studio.activeProject.monthsRemaining -= 1;
+            if (c.studio.activeProject.monthsRemaining <= 0) {
+              const proj = c.studio.activeProject;
+              const isViral = Math.random() < proj.viralChance;
+              const randomFactor = 0.85 + Math.random() * 0.3;
+              const multiplier = isViral
+                ? proj.viralMultiplierMin + Math.random() * (proj.viralMultiplierMax - proj.viralMultiplierMin)
+                : randomFactor;
+              const payout = Math.round(proj.baseProfit * multiplier);
+              c.money += payout;
+              c.studio.projectsCompleted += 1;
+              c.studio.reputation = clamp(c.studio.reputation + (isViral ? 15 : 4));
+              pushEvent(
+                c,
+                isViral
+                  ? `"${proj.name}" went VIRAL! Your studio earned ${payout.toLocaleString()}!`
+                  : `"${proj.name}" launched and earned ${payout.toLocaleString()}.`,
+                isViral ? 'good' : 'neutral',
+              );
+              c.studio.activeProject = null;
+            }
+          }
         }
 
         const livingCost = 500;
@@ -389,6 +505,21 @@ export const useGameStore = create<GameStore>()(
         set({ character: c, currentJobOffers: generateOffers(c) });
       },
     }),
-    { name: 'dev-career-game-save' },
+    {
+      name: 'dev-career-game-save',
+      version: 2,
+      migrate: (persistedState) => {
+        const state = persistedState as GameStore;
+        const c = state?.character;
+        if (c) {
+          if (c.currentJob && !c.currentJob.workMode) c.currentJob.workMode = 'standard';
+          if (c.studio && c.studio.activeProject === undefined) c.studio.activeProject = null;
+          if (c.studio && c.studio.projectsCompleted === undefined) c.studio.projectsCompleted = 0;
+          if (!c.miniGamePlaysThisMonth) c.miniGamePlaysThisMonth = {};
+          if (!c.practicePlaysThisMonth) c.practicePlaysThisMonth = {};
+        }
+        return state;
+      },
+    },
   ),
 );

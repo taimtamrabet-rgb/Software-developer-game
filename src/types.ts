@@ -18,6 +18,8 @@ export interface TitleLevel {
   salaryMultiplier: number;
 }
 
+export type WorkMode = 'standard' | 'overtime' | 'light' | 'passion';
+
 export interface CurrentJob {
   track: Track;
   tier: number;
@@ -28,6 +30,7 @@ export interface CurrentJob {
   salary: number;
   monthsAtJob: number;
   monthsAtTier: number;
+  workMode: WorkMode;
 }
 
 export interface JobOffer {
@@ -77,6 +80,18 @@ export interface Skills {
   marketing: number;
 }
 
+export interface StudioProjectInstance {
+  templateId: string;
+  name: string;
+  totalMonths: number;
+  monthsRemaining: number;
+  cost: number;
+  baseProfit: number;
+  viralChance: number;
+  viralMultiplierMin: number;
+  viralMultiplierMax: number;
+}
+
 export interface StudioState {
   type: StudioType;
   name: string;
@@ -87,6 +102,8 @@ export interface StudioState {
   monthsRunning: number;
   cashBuffer: number;
   lastMonthProfit: number;
+  activeProject: StudioProjectInstance | null;
+  projectsCompleted: number;
 }
 
 export interface GameEvent {
@@ -95,6 +112,8 @@ export interface GameEvent {
   text: string;
   kind: 'good' | 'bad' | 'neutral';
 }
+
+export type MiniGameId = 'bug-squash' | 'pattern-match' | 'pitch-timing' | 'ad-blitz';
 
 export interface Character {
   name: string;
@@ -117,6 +136,8 @@ export interface Character {
   studiosFounded: number;
   studiosSold: number;
   peakNetWorth: number;
+  miniGamePlaysThisMonth: Partial<Record<MiniGameId, number>>;
+  practicePlaysThisMonth: Partial<Record<SkillName, number>>;
 }
 
 export interface GameState {
